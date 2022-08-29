@@ -1,10 +1,7 @@
 package ru.netology.web.test;
 
-import static com.codeborne.selenide.Condition.text;
-import static com.codeborne.selenide.Condition.visible;
-import static com.codeborne.selenide.Selenide.$;
-import static org.junit.jupiter.api.Assertions.*;
-
+import com.codeborne.selenide.Configuration;
+import com.github.javafaker.Faker;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -12,131 +9,127 @@ import org.junit.jupiter.params.provider.CsvSource;
 import ru.netology.web.data.DataHelper;
 import ru.netology.web.page.*;
 
+import java.util.Locale;
+
 import static com.codeborne.selenide.Selenide.open;
+import static org.junit.jupiter.api.Assertions.*;
 
 class MoneyTransferTest {
 
     private DataHelper.AuthInfo authInfo = DataHelper.getAuthInfo();
-    private Integer firstCardBalance;
-    private Integer secondCardBalance;
-    private String firstCardId = DataHelper.CardInfo.getFirstCardInfo(authInfo).getId();
-    private String secondCardId = DataHelper.CardInfo.getSecondCardInfo(authInfo).getId();
+    Faker faker = new Faker(new Locale("ru"));
+
 
     @BeforeEach
     void setup() {
         open("http://localhost:9999");
+        Configuration.holdBrowserOpen = true;
     }
 
-    void logIn() {
+    DashboardPage logIn() {
         var loginPage = open("http://localhost:9999", LoginPageV2.class);
         var verificationPage = loginPage.validLogin(authInfo);
         var verificationCode = DataHelper.getVerificationCodeFor(authInfo);
         verificationPage.validVerify(verificationCode);
+        return new DashboardPage();
     }
 
-    @Test
-    void shouldLogIn() {
-        var loginPage = open("http://localhost:9999", LoginPageV2.class);
-        var authInfo = DataHelper.getAuthInfo();
-        var verificationPage = loginPage.validLogin(authInfo);
-        var verificationCode = DataHelper.getVerificationCodeFor(authInfo);
-        verificationPage.validVerify(verificationCode);
-        $("[data-test-id=dashboard]").shouldBe(visible);
-        $("[data-test-id=dashboard] ~h1").shouldBe(visible).shouldHave(text("Ваши карты"));
+    void balansesEguals(DashboardPage dashboardPage) {
+        var firstCardBalance = dashboardPage.getBalanceCard(0);
+        var secondCardBalance = dashboardPage.getBalanceCard(1);
+        if (firstCardBalance < secondCardBalance) {
+            int alignTransfer = (firstCardBalance + secondCardBalance) / 2 - firstCardBalance;
+            dashboardPage.pressReplenishCard(0)
+                    .replenishCardBalance(alignTransfer, DataHelper.getSecondCardNumber());
+        }
+        if (firstCardBalance > secondCardBalance) {
+            int alignTransfer = (firstCardBalance + secondCardBalance) / 2 - secondCardBalance;
+            dashboardPage.pressReplenishCard(1)
+                    .replenishCardBalance(alignTransfer, DataHelper.getFirstCardNumber());
+        }
     }
 
     @Test
     void shouldNotLogInIfUsersDataIsWrong() {
         var loginPage = open("http://localhost:9999", LoginPageV2.class);
         var authInfo = DataHelper.getWrongAuthInfo();
-        var verificationPage = loginPage.validLogin(authInfo);
-        $("[data-test-id=error-notification]").shouldBe(visible).shouldHave(text("Ошибка! Неверно указан логин или пароль"));
+        loginPage.invalidLogin(authInfo);
     }
 
-    @ParameterizedTest(name = "{index} {0}")
-    @CsvSource({"Transfer = 1,1",
-            "Transfer = 20,20",
-            "Transfer = 300,300",
-            "Transfer = 4000,4000"})
-    void shouldTransferMoneyFromFirstCardToSecond(String testName, int transfer) {
-        logIn();
-        firstCardBalance = DashboardPage.getBalanceCard(firstCardId);
-        secondCardBalance = DashboardPage.getBalanceCard(secondCardId);
-        if (firstCardBalance < transfer) {
-            int alignTransfer = (firstCardBalance + secondCardBalance) / 2 - firstCardBalance;
-            DashboardPage.pressReplenishCard(firstCardId)
-                    .replenishCardBalance(alignTransfer, DataHelper.CardInfo.getSecondCardInfo(authInfo));
-            firstCardBalance = DashboardPage.getBalanceCard(firstCardId);
-            secondCardBalance = DashboardPage.getBalanceCard(secondCardId);
-        }
-
-        DashboardPage.pressReplenishCard(secondCardId)
-                .replenishCardBalance(transfer, DataHelper.CardInfo.getFirstCardInfo(authInfo));
-        assertEquals(firstCardBalance - transfer, DashboardPage.getBalanceCard(firstCardId));
-        assertEquals(secondCardBalance + transfer, DashboardPage.getBalanceCard(secondCardId));
+    @Test
+    void shouldTransferMoneyFromFirstCardToSecond() {
+        DashboardPage dashboardPage = logIn();
+        balansesEguals(dashboardPage);
+        var firstCardBalance = dashboardPage.getBalanceCard(0);
+        var secondCardBalance = dashboardPage.getBalanceCard(1);
+        int transfer = faker.number().numberBetween(1, firstCardBalance);
+        dashboardPage.pressReplenishCard(1)
+                .replenishCardBalance(transfer, DataHelper.getFirstCardNumber());
+        assertEquals(firstCardBalance - transfer, dashboardPage.getBalanceCard(0));
+        assertEquals(secondCardBalance + transfer, dashboardPage.getBalanceCard(1));
     }
 
-    @ParameterizedTest(name = "{index} {0}")
-    @CsvSource({"Transfer = 300,300",
-            "Transfer = 4000,4000"})
-    void shouldNotTransferMoneyFromFirstCardToSecondIfCancelLed(String testName, int transfer) {
-        logIn();
-        firstCardBalance = DashboardPage.getBalanceCard(firstCardId);
-        secondCardBalance = DashboardPage.getBalanceCard(secondCardId);
-        if (firstCardBalance < transfer) {
-            int alignTransfer = (firstCardBalance + secondCardBalance) / 2 - firstCardBalance;
-            DashboardPage.pressReplenishCard(firstCardId)
-                    .replenishCardBalance(alignTransfer, DataHelper.CardInfo.getSecondCardInfo(authInfo));
-            firstCardBalance = DashboardPage.getBalanceCard(firstCardId);
-            secondCardBalance = DashboardPage.getBalanceCard(secondCardId);
-        }
-
-        DashboardPage.pressReplenishCard(secondCardId)
-                .replenishCardCancel(transfer, DataHelper.CardInfo.getFirstCardInfo(authInfo));
-        assertEquals(firstCardBalance, DashboardPage.getBalanceCard(firstCardId));
-        assertEquals(secondCardBalance, DashboardPage.getBalanceCard(secondCardId));
+    @Test
+    void shouldNotTransferMoneyFromFirstCardToSecondIfCancelLed() {
+        DashboardPage dashboardPage = logIn();
+        balansesEguals(dashboardPage);
+        var firstCardBalance = dashboardPage.getBalanceCard(0);
+        var secondCardBalance = dashboardPage.getBalanceCard(1);
+        int transfer = faker.number().numberBetween(1, firstCardBalance);
+        dashboardPage.pressReplenishCard(1)
+                .replenishCardCancel(transfer, DataHelper.getFirstCardNumber());
+        assertEquals(firstCardBalance, dashboardPage.getBalanceCard(0));
+        assertEquals(secondCardBalance, dashboardPage.getBalanceCard(1));
+    }
+    @Test
+    void shouldNotTransferMoneyFromFirstCardToSecondIfTransferMoreBalance() {
+        DashboardPage dashboardPage = logIn();
+        balansesEguals(dashboardPage);
+        var firstCardBalance = dashboardPage.getBalanceCard(0);
+        var secondCardBalance = dashboardPage.getBalanceCard(1);
+        int transfer = faker.number().numberBetween(firstCardBalance, firstCardBalance+10_000);
+        dashboardPage.pressReplenishCard(1)
+                .replenishCardBalance(transfer, DataHelper.getFirstCardNumber());
+        assertEquals(firstCardBalance, dashboardPage.getBalanceCard(0));
+        assertEquals(secondCardBalance, dashboardPage.getBalanceCard(1));
     }
 
-    @ParameterizedTest(name = "{index} {0}")
-    @CsvSource({"Transfer = 4,4",
-            "Transfer = 30,30",
-            "Transfer = 200,200",
-            "Transfer = 1000,1000"})
-    void shouldTransferMoneyFromSecondCardToFirst(String testName, int transfer) {
-        logIn();
-        firstCardBalance = DashboardPage.getBalanceCard(firstCardId);
-        secondCardBalance = DashboardPage.getBalanceCard(secondCardId);
-        if (secondCardBalance < transfer) {
-            int alignTransfer = (firstCardBalance + secondCardBalance) / 2 - secondCardBalance;
-            DashboardPage.pressReplenishCard(secondCardId)
-                    .replenishCardBalance(alignTransfer, DataHelper.CardInfo.getFirstCardInfo(authInfo));
-            firstCardBalance = DashboardPage.getBalanceCard(firstCardId);
-            secondCardBalance = DashboardPage.getBalanceCard(secondCardId);
-        }
-        DashboardPage.pressReplenishCard(firstCardId)
-                .replenishCardBalance(transfer, DataHelper.CardInfo.getSecondCardInfo(authInfo));
-        assertEquals(firstCardBalance + transfer, DashboardPage.getBalanceCard(firstCardId));
-        assertEquals(secondCardBalance - transfer, DashboardPage.getBalanceCard(secondCardId));
+    @Test
+    void shouldTransferMoneyFromSecondCardToFirst() {
+        DashboardPage dashboardPage = logIn();
+        balansesEguals(dashboardPage);
+        var firstCardBalance = dashboardPage.getBalanceCard(0);
+        var secondCardBalance = dashboardPage.getBalanceCard(1);
+        int transfer = faker.number().numberBetween(1, secondCardBalance);
+        dashboardPage.pressReplenishCard(0)
+                .replenishCardBalance(transfer, DataHelper.getSecondCardNumber());
+        assertEquals(firstCardBalance + transfer, dashboardPage.getBalanceCard(0));
+        assertEquals(secondCardBalance - transfer, dashboardPage.getBalanceCard(1));
     }
 
-    @ParameterizedTest(name = "{index} {0}")
-    @CsvSource({"Transfer = 200,200",
-            "Transfer = 1000,1000"})
-    void shouldNotTransferMoneyFromSecondCardToFirstIfCancelled(String testName, int transfer) {
-        logIn();
-        firstCardBalance = DashboardPage.getBalanceCard(firstCardId);
-        secondCardBalance = DashboardPage.getBalanceCard(secondCardId);
-        if (secondCardBalance < transfer) {
-            int alignTransfer = (firstCardBalance + secondCardBalance) / 2 - secondCardBalance;
-            DashboardPage.pressReplenishCard(secondCardId)
-                    .replenishCardBalance(alignTransfer, DataHelper.CardInfo.getFirstCardInfo(authInfo));
-            firstCardBalance = DashboardPage.getBalanceCard(firstCardId);
-            secondCardBalance = DashboardPage.getBalanceCard(secondCardId);
-        }
-        DashboardPage.pressReplenishCard(firstCardId)
-                .replenishCardCancel(transfer, DataHelper.CardInfo.getSecondCardInfo(authInfo));
-        assertEquals(firstCardBalance, DashboardPage.getBalanceCard(firstCardId));
-        assertEquals(secondCardBalance, DashboardPage.getBalanceCard(secondCardId));
+    @Test
+    void shouldNotTransferMoneyFromSecondCardToFirstIfCancelled() {
+        DashboardPage dashboardPage = logIn();
+        balansesEguals(dashboardPage);
+        var firstCardBalance = dashboardPage.getBalanceCard(0);
+        var secondCardBalance = dashboardPage.getBalanceCard(1);
+        int transfer = faker.number().numberBetween(1, secondCardBalance);
+        dashboardPage.pressReplenishCard(0)
+                .replenishCardCancel(transfer, DataHelper.getSecondCardNumber());
+        assertEquals(firstCardBalance, dashboardPage.getBalanceCard(0));
+        assertEquals(secondCardBalance, dashboardPage.getBalanceCard(1));
+    }
+    @Test
+    void shouldNotTransferMoneyFromSecondCardToFirstIfTransferMoreBalance() {
+        DashboardPage dashboardPage = logIn();
+        balansesEguals(dashboardPage);
+        var firstCardBalance = dashboardPage.getBalanceCard(0);
+        var secondCardBalance = dashboardPage.getBalanceCard(1);
+        int transfer = faker.number().numberBetween(secondCardBalance, secondCardBalance+10_000);
+        dashboardPage.pressReplenishCard(0)
+                .replenishCardBalance(transfer, DataHelper.getSecondCardNumber());
+        assertEquals(firstCardBalance, dashboardPage.getBalanceCard(0));
+        assertEquals(secondCardBalance, dashboardPage.getBalanceCard(1));
     }
 }
 

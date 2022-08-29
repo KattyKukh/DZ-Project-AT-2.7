@@ -1,7 +1,8 @@
 package ru.netology.web.data;
 
-import lombok.AllArgsConstructor;
 import lombok.Value;
+
+import javax.xml.crypto.dsig.Manifest;
 
 public class DataHelper {
     private DataHelper() {
@@ -11,10 +12,6 @@ public class DataHelper {
     public static class AuthInfo {
         private String login;
         private String password;
-
-        public String getLogin() {
-            return login;
-        }
     }
 
     public static AuthInfo getAuthInfo() {
@@ -31,22 +28,20 @@ public class DataHelper {
     }
 
     public static VerificationCode getVerificationCodeFor(AuthInfo authInfo) {
-
         return new VerificationCode("12345");
     }
 
     @Value
-    @AllArgsConstructor
     public static class CardInfo {
-        private String id;
-        private String cardNumber;
-
-        public static CardInfo getFirstCardInfo(AuthInfo authInfo) {
-            return new CardInfo("92df3f1c-a033-48e6-8390-206f6b1f56c0", "5559 0000 0000 0001");
-        }
-
-        public static CardInfo getSecondCardInfo(AuthInfo authInfo) {
-            return new CardInfo("0f3f5c2a-249e-4c3d-8287-09f7a039391d", "5559 0000 0000 0002");
-        }
+       private String cardNumber;
     }
+
+    public static CardInfo getFirstCardNumber() {
+        return new CardInfo("5559 0000 0000 0001");
+    }
+
+    public static CardInfo getSecondCardNumber() {
+        return new CardInfo("5559 0000 0000 0002");
+    }
+
 }
