@@ -33,7 +33,7 @@ public class DataHelper {
 
     @Value
     public static class CardInfo {
-       private String cardNumber;
+        private String cardNumber;
     }
 
     public static CardInfo getFirstCardNumber() {

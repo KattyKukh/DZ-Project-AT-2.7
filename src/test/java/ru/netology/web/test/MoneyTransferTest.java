@@ -81,13 +81,14 @@ class MoneyTransferTest {
         assertEquals(firstCardBalance, dashboardPage.getBalanceCard(0));
         assertEquals(secondCardBalance, dashboardPage.getBalanceCard(1));
     }
+
     @Test
     void shouldNotTransferMoneyFromFirstCardToSecondIfTransferMoreBalance() {
         DashboardPage dashboardPage = logIn();
         balansesEguals(dashboardPage);
         var firstCardBalance = dashboardPage.getBalanceCard(0);
         var secondCardBalance = dashboardPage.getBalanceCard(1);
-        int transfer = faker.number().numberBetween(firstCardBalance, firstCardBalance+10_000);
+        int transfer = faker.number().numberBetween(firstCardBalance, firstCardBalance + 10_000);
         dashboardPage.pressReplenishCard(1)
                 .replenishCardBalance(transfer, DataHelper.getFirstCardNumber());
         assertEquals(firstCardBalance, dashboardPage.getBalanceCard(0));
@@ -119,13 +120,14 @@ class MoneyTransferTest {
         assertEquals(firstCardBalance, dashboardPage.getBalanceCard(0));
         assertEquals(secondCardBalance, dashboardPage.getBalanceCard(1));
     }
+
     @Test
     void shouldNotTransferMoneyFromSecondCardToFirstIfTransferMoreBalance() {
         DashboardPage dashboardPage = logIn();
         balansesEguals(dashboardPage);
         var firstCardBalance = dashboardPage.getBalanceCard(0);
         var secondCardBalance = dashboardPage.getBalanceCard(1);
-        int transfer = faker.number().numberBetween(secondCardBalance, secondCardBalance+10_000);
+        int transfer = faker.number().numberBetween(secondCardBalance, secondCardBalance + 10_000);
         dashboardPage.pressReplenishCard(0)
                 .replenishCardBalance(transfer, DataHelper.getSecondCardNumber());
         assertEquals(firstCardBalance, dashboardPage.getBalanceCard(0));
