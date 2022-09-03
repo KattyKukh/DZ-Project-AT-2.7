@@ -2,7 +2,7 @@ package ru.netology.web.data;
 
 import lombok.Value;
 
-import javax.xml.crypto.dsig.Manifest;
+import java.util.Random;
 
 public class DataHelper {
     private DataHelper() {
@@ -10,8 +10,8 @@ public class DataHelper {
 
     @Value
     public static class AuthInfo {
-        private String login;
-        private String password;
+        String login;
+        String password;
     }
 
     public static AuthInfo getAuthInfo() {
@@ -24,7 +24,7 @@ public class DataHelper {
 
     @Value
     public static class VerificationCode {
-        private String code;
+        String code;
     }
 
     public static VerificationCode getVerificationCodeFor(AuthInfo authInfo) {
@@ -33,7 +33,7 @@ public class DataHelper {
 
     @Value
     public static class CardInfo {
-        private String cardNumber;
+        String cardNumber;
     }
 
     public static CardInfo getFirstCardNumber() {
@@ -42,6 +42,10 @@ public class DataHelper {
 
     public static CardInfo getSecondCardNumber() {
         return new CardInfo("5559 0000 0000 0002");
+    }
+
+    public static int getTransferAmount(int balance) {
+        return new Random().nextInt(balance) + 1;
     }
 
 }

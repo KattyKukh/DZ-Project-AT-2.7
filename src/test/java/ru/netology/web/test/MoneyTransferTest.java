@@ -1,24 +1,17 @@
 package ru.netology.web.test;
 
 import com.codeborne.selenide.Configuration;
-import com.github.javafaker.Faker;
-import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.provider.CsvSource;
 import ru.netology.web.data.DataHelper;
 import ru.netology.web.page.*;
 
-import java.util.Locale;
-
 import static com.codeborne.selenide.Selenide.open;
 import static org.junit.jupiter.api.Assertions.*;
+import static ru.netology.web.data.DataHelper.getTransferAmount;
 
 class MoneyTransferTest {
-
     private DataHelper.AuthInfo authInfo = DataHelper.getAuthInfo();
-    Faker faker = new Faker(new Locale("ru"));
-
 
     @BeforeEach
     void setup() {
@@ -30,8 +23,7 @@ class MoneyTransferTest {
         var loginPage = open("http://localhost:9999", LoginPageV2.class);
         var verificationPage = loginPage.validLogin(authInfo);
         var verificationCode = DataHelper.getVerificationCodeFor(authInfo);
-        verificationPage.validVerify(verificationCode);
-        return new DashboardPage();
+        return verificationPage.validVerify(verificationCode);
     }
 
     void balansesEguals(DashboardPage dashboardPage) {
@@ -62,7 +54,7 @@ class MoneyTransferTest {
         balansesEguals(dashboardPage);
         var firstCardBalance = dashboardPage.getBalanceCard(0);
         var secondCardBalance = dashboardPage.getBalanceCard(1);
-        int transfer = faker.number().numberBetween(1, firstCardBalance);
+        int transfer = getTransferAmount(firstCardBalance);
         dashboardPage.pressReplenishCard(1)
                 .replenishCardBalance(transfer, DataHelper.getFirstCardNumber());
         assertEquals(firstCardBalance - transfer, dashboardPage.getBalanceCard(0));
@@ -75,7 +67,7 @@ class MoneyTransferTest {
         balansesEguals(dashboardPage);
         var firstCardBalance = dashboardPage.getBalanceCard(0);
         var secondCardBalance = dashboardPage.getBalanceCard(1);
-        int transfer = faker.number().numberBetween(1, firstCardBalance);
+        int transfer = getTransferAmount(firstCardBalance);
         dashboardPage.pressReplenishCard(1)
                 .replenishCardCancel(transfer, DataHelper.getFirstCardNumber());
         assertEquals(firstCardBalance, dashboardPage.getBalanceCard(0));
@@ -88,7 +80,7 @@ class MoneyTransferTest {
         balansesEguals(dashboardPage);
         var firstCardBalance = dashboardPage.getBalanceCard(0);
         var secondCardBalance = dashboardPage.getBalanceCard(1);
-        int transfer = faker.number().numberBetween(firstCardBalance, firstCardBalance + 10_000);
+        int transfer = firstCardBalance + 10_000;
         dashboardPage.pressReplenishCard(1)
                 .replenishCardBalance(transfer, DataHelper.getFirstCardNumber());
         assertEquals(firstCardBalance, dashboardPage.getBalanceCard(0));
@@ -101,7 +93,7 @@ class MoneyTransferTest {
         balansesEguals(dashboardPage);
         var firstCardBalance = dashboardPage.getBalanceCard(0);
         var secondCardBalance = dashboardPage.getBalanceCard(1);
-        int transfer = faker.number().numberBetween(1, secondCardBalance);
+        int transfer = getTransferAmount(secondCardBalance);
         dashboardPage.pressReplenishCard(0)
                 .replenishCardBalance(transfer, DataHelper.getSecondCardNumber());
         assertEquals(firstCardBalance + transfer, dashboardPage.getBalanceCard(0));
@@ -114,7 +106,7 @@ class MoneyTransferTest {
         balansesEguals(dashboardPage);
         var firstCardBalance = dashboardPage.getBalanceCard(0);
         var secondCardBalance = dashboardPage.getBalanceCard(1);
-        int transfer = faker.number().numberBetween(1, secondCardBalance);
+        int transfer = getTransferAmount(secondCardBalance);
         dashboardPage.pressReplenishCard(0)
                 .replenishCardCancel(transfer, DataHelper.getSecondCardNumber());
         assertEquals(firstCardBalance, dashboardPage.getBalanceCard(0));
@@ -127,7 +119,7 @@ class MoneyTransferTest {
         balansesEguals(dashboardPage);
         var firstCardBalance = dashboardPage.getBalanceCard(0);
         var secondCardBalance = dashboardPage.getBalanceCard(1);
-        int transfer = faker.number().numberBetween(secondCardBalance, secondCardBalance + 10_000);
+        int transfer = secondCardBalance + 10_000;
         dashboardPage.pressReplenishCard(0)
                 .replenishCardBalance(transfer, DataHelper.getSecondCardNumber());
         assertEquals(firstCardBalance, dashboardPage.getBalanceCard(0));
